@@ -50,10 +50,6 @@ Use Ralph Wiggum when:
 # Using Vercel's add-skill
 npx add-skill injusticescorpio/ralph-wiggum-bob
 
-# Using OpenSkills
-openskills install injusticescorpio/ralph-wiggum-bob
-```
-
 ### Full Setup (Recommended)
 
 For full Ralph Wiggum setup with constitution and interview:
