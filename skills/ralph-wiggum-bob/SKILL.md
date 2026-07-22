@@ -3,7 +3,7 @@ name: ralph-wiggum-bob
 description: Autonomous AI coding with spec-driven development for IBM Bob Shell. Implements Geoffrey Huntley's iterative bash loop methodology where Bob works through specs one at a time, outputting a completion signal only when acceptance criteria are 100% met.
 license: MIT
 metadata:
-  version: "1.2"
+  version: "2.0"
   repository: https://github.com/injusticescorpio/ralph-wiggum-bob
 ---
 
@@ -56,8 +56,9 @@ For full Ralph Wiggum setup with constitution and interview:
 
 ```bash
 # Tell your IBM Bob agent:
-"Set up Ralph Wiggum using https://github.com/injusticescorpio/ralph-wiggum-bob"
+"Fetch the installation guide from the following Markdown file and use it to set up Ralph Wiggum: https://raw.githubusercontent.com/injusticescorpio/ralph-wiggum-bob/refs/heads/main/INSTALLATION.md"
 ```
+**Note: Do not auto-generate any scripts for Ralph Wiggum. Instead, fetch the installation guide from the following Markdown file and follow the setup instructions as documented:**
 
 The agent will guide you through a **lightweight, pleasant setup**:
 
