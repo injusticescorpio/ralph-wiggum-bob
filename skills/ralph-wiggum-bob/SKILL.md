@@ -3,7 +3,7 @@ name: ralph-wiggum-bob
 description: Autonomous AI coding with spec-driven development for IBM Bob Shell. Implements Geoffrey Huntley's iterative bash loop methodology where Bob works through specs one at a time, outputting a completion signal only when acceptance criteria are 100% met.
 license: MIT
 metadata:
-  version: "1.1"
+  version: "1.2"
   repository: https://github.com/injusticescorpio/ralph-wiggum-bob
 ---
 
@@ -174,7 +174,6 @@ For Ralph to work effectively, enable full autonomy:
 |------------|-------------|
 | Non-interactive mode | `bob -p "prompt"` or `cat prompt.txt \| bob` |
 | Auto-approve all tools | `bob --yolo` |
-| Accept license (first run) | `bob --accept-license -p "Hello"` |
 | Reference a file in prompt | `bob -p "Review @src/app.js"` |
 
 ## Links
