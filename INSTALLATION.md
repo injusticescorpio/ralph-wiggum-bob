@@ -26,16 +26,17 @@ mkdir -p .specify/memory specs scripts/lib logs history completion_log
 
 ---
 
-## Phase 2: Copy Scripts
+## Phase 2: Download Scripts
 
-Copy the two script files from this repo into the target project's `scripts/` directory:
-
-| Source (this repo) | Destination (target project) |
-|--------------------|------------------------------|
-| `scripts/ralph-loop.sh` | `scripts/ralph-loop.sh` |
-| `scripts/lib/spec_queue.sh` | `scripts/lib/spec_queue.sh` |
+Fetch the scripts directly from GitHub:
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/injusticescorpio/ralph-wiggum-bob/refs/heads/main/scripts/ralph-loop.sh \
+  -o scripts/ralph-loop.sh
+
+curl -fsSL https://raw.githubusercontent.com/injusticescorpio/ralph-wiggum-bob/refs/heads/main/scripts/lib/spec_queue.sh \
+  -o scripts/lib/spec_queue.sh
+
 chmod +x scripts/ralph-loop.sh
 ```
 
