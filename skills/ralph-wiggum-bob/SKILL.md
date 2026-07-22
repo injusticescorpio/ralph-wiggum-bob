@@ -32,9 +32,9 @@ Use Ralph Wiggum when:
 ┌─────────────────────────────────────────────────────────────┐
 │                     RALPH LOOP                              │
 ├─────────────────────────────────────────────────────────────┤
-│  Loop 1: Pick spec A → Implement → Test → Commit → DONE    │
-│  Loop 2: Pick spec B → Implement → Test → Commit → DONE    │
-│  Loop 3: Pick spec C → Implement → Test → Commit → DONE    │
+│  Loop 1: Pick spec A → Implement → Test → Commit → DONE     │
+│  Loop 2: Pick spec B → Implement → Test → Commit → DONE     │
+│  Loop 3: Pick spec C → Implement → Test → Commit → DONE     │
 │  ...                                                        │
 │                                                             │
 │  Each iteration = Fresh context window                      │
