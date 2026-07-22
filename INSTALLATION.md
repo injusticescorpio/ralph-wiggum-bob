@@ -47,18 +47,14 @@ chmod +x scripts/ralph-loop.sh
 
 ---
 
-## Phase 3: Accept the IBM Bob License (First Run Only)
-
-Bob Shell requires license acceptance before it can run non-interactively.
-If this has not been done yet, run:
+## Phase 3: Get Version Info
 
 ```bash
-bob --accept-license -p "Hello"
+git ls-remote https://github.com/injusticescorpio/ralph-wiggum-bob HEAD | cut -f1
 ```
 
-> **Note:** Non-interactive mode (used by the loop) requires **API key authentication**.
-> Interactive IBMid login is not supported for scripted use.
-> Confirm that `~/.bob/settings.json` or the environment has a valid API key configured.
+Store the commit hash for the constitution.
+
 
 ---
 
