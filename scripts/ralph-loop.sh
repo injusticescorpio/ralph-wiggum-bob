@@ -43,9 +43,6 @@ MODE="build"
 BOB_CMD="${BOB_CMD:-bob}"
 YOLO_FLAG="--yolo"
 TAIL_LINES=5
-ROLLING_OUTPUT_LINES=5
-ROLLING_OUTPUT_INTERVAL=10
-ROLLING_RENDERED_LINES=0
 
 # Colors
 RED='\033[0;31m'
@@ -92,7 +89,6 @@ Work Sources (checked in order):
 Bob CLI flags used:
   -p              Non-interactive prompt mode (required for automation)
   --yolo          Auto-approve all tool calls (enabled when YOLO Mode is on)
-  --accept-license Required on first run — see INSTALLATION.md
 
 How it works:
   1. Each iteration pipes PROMPT_build.md into bob via stdin
@@ -106,75 +102,83 @@ How it works:
 EOF
 }
 
-print_latest_output() {
+# stream_progress: watches the log as Bob writes it and prints clean status lines.
+# - 🤔 <title>  when a <thinking> block opens (with its title)
+# - ✓ done      when </thinking> closes
+# - ⚙  <tool>   for each [using tool ...] line
+# - ▶ <task>    for the active todo item (⊡)
+# Runs as a background subshell; killed after Bob finishes.
+stream_progress() {
     local log_file="$1"
-    local label="${2:-Bob}"
-    local target="/dev/tty"
-
+    local waited=0
+    while [ ! -f "$log_file" ] && [ "$waited" -lt 10 ]; do
+        sleep 0.5; waited=$((waited + 1))
+    done
     [ -f "$log_file" ] || return 0
 
-    if [ ! -w "$target" ]; then
-        target="/dev/stdout"
-    fi
-
-    {
-        echo "Latest ${label} output (last ${TAIL_LINES} lines):"
-        tail -n "$TAIL_LINES" "$log_file"
-    } > "$target"
-}
-
-watch_latest_output() {
-    local log_file="$1"
-    local label="${2:-Bob}"
-    local target="/dev/tty"
-    local use_tty=false
-    local use_tput=false
-
-    [ -f "$log_file" ] || return 0
-
-    if [ ! -w "$target" ]; then
-        target="/dev/stdout"
-    else
-        use_tty=true
-        if command -v tput &>/dev/null; then
-            use_tput=true
-        fi
-    fi
-
-    if [ "$use_tty" = true ]; then
-        if [ "$use_tput" = true ]; then
-            tput cr > "$target"
-            tput sc > "$target"
-        else
-            printf "\r\0337" > "$target"
-        fi
-    fi
+    local last_line=0
+    local in_thinking=false
+    local thinking_title=""
 
     while true; do
-        local timestamp
-        timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+        local total_lines
+        total_lines=$(wc -l < "$log_file" 2>/dev/null || echo 0)
 
-        if [ "$use_tty" = true ]; then
-            if [ "$use_tput" = true ]; then
-                tput rc > "$target"
-                tput ed > "$target"
-                tput cr > "$target"
-            else
-                printf "\0338\033[J\r" > "$target"
-            fi
+        if [ "$total_lines" -gt "$last_line" ]; then
+            while IFS= read -r line; do
+
+                # <thinking> opens
+                if echo "$line" | grep -q "^<thinking>"; then
+                    in_thinking=true
+                    thinking_title=$(echo "$line" | sed 's|^<thinking>||;s|</thinking>.*||' | xargs)
+                    if [ -n "$thinking_title" ]; then
+                        printf "${CYAN}  🤔 %s${NC}\n" "$thinking_title" > /dev/tty
+                        thinking_title="__shown__"
+                    fi
+                    continue
+                fi
+
+                # </thinking> closes
+                if echo "$line" | grep -q "</thinking>"; then
+                    if [ -n "$thinking_title" ] && [ "$thinking_title" != "__shown__" ]; then
+                        printf "${CYAN}  🤔 %s${NC}\n" "$thinking_title" > /dev/tty
+                    fi
+                    printf "${GREEN}  ✓ done${NC}\n" > /dev/tty
+                    in_thinking=false
+                    thinking_title=""
+                    continue
+                fi
+
+                # first non-empty line inside <thinking> becomes the title
+                if [ "$in_thinking" = true ] && [ -z "$thinking_title" ]; then
+                    local stripped
+                    stripped=$(echo "$line" | sed 's/\*\*//g' | xargs)
+                    if [ -n "$stripped" ]; then
+                        printf "${CYAN}  🤔 %s${NC}\n" "$stripped" > /dev/tty
+                        thinking_title="__shown__"
+                    fi
+                    continue
+                fi
+
+                # [using tool ...]
+                if echo "$line" | grep -q "^\[using tool "; then
+                    local tool_desc
+                    tool_desc=$(echo "$line" | sed 's/^\[using tool //' | sed 's/\]$//')
+                    printf "${YELLOW}  ⚙  %s${NC}\n" "$tool_desc" > /dev/tty
+                fi
+
+                # active todo item ( ⊡ )
+                if echo "$line" | grep -qE "^ ⊡ "; then
+                    local task
+                    task=$(echo "$line" | sed 's/^ ⊡ //' | xargs)
+                    printf "${PURPLE}  ▶ %s${NC}\n" "$task" > /dev/tty
+                fi
+
+            done < <(sed -n "$((last_line + 1)),${total_lines}p" "$log_file" 2>/dev/null)
+            last_line=$total_lines
         fi
 
-        {
-            echo -e "${CYAN}[$timestamp] Latest ${label} output (last ${ROLLING_OUTPUT_LINES} lines):${NC}"
-            if [ ! -s "$log_file" ]; then
-                echo "(no output yet)"
-            else
-                tail -n "$ROLLING_OUTPUT_LINES" "$log_file" 2>/dev/null || true
-            fi
-            echo ""
-        } > "$target"
-
-        sleep "$ROLLING_OUTPUT_INTERVAL"
+        sleep 0.3
     done
 }
 
@@ -267,9 +271,9 @@ fi
 # Build Bob flags
 # bob -p reads prompt from argument; we pipe via stdin using `cat file | bob`
 # --yolo auto-approves all tool calls (file writes, shell commands, etc.)
-BOB_FLAGS="-p"
+BOB_FLAGS=""
 if [ "$YOLO_ENABLED" = true ]; then
-    BOB_FLAGS="$BOB_FLAGS $YOLO_FLAG"
+    BOB_FLAGS="$YOLO_FLAG"
 fi
 
 # Get current branch
@@ -352,25 +356,33 @@ while true; do
     echo -e "${BLUE}[$TIMESTAMP]${NC} Starting iteration $ITERATION"
     echo ""
 
-    # Log file for this iteration
+    # Log file for this iteration (full raw output from Bob)
     LOG_FILE="$LOG_DIR/ralph_${MODE}_iter_${ITERATION}_$(date '+%Y%m%d_%H%M%S').log"
     : > "$LOG_FILE"
     WATCH_PID=""
 
-    if [ "$ROLLING_OUTPUT_INTERVAL" -gt 0 ] && [ "$ROLLING_OUTPUT_LINES" -gt 0 ] && [ -t 1 ] && [ -w /dev/tty ]; then
-        watch_latest_output "$LOG_FILE" "Bob" &
+    # Start live progress watcher — reads log, prints clean status to /dev/tty
+    if [ -w /dev/tty ]; then
+        stream_progress "$LOG_FILE" &
         WATCH_PID=$!
     fi
 
-    # Run Bob with prompt piped via stdin, capture output
-    # bob reads the prompt from stdin when used with `cat file | bob`
-    # The -p flag enables non-interactive (batch) mode
-    BOB_OUTPUT=""
-    if BOB_OUTPUT=$(cat "$PROMPT_FILE" | "$BOB_CMD" $BOB_FLAGS 2>&1 | tee "$LOG_FILE"); then
-        if [ -n "$WATCH_PID" ]; then
-            kill "$WATCH_PID" 2>/dev/null || true
-            wait "$WATCH_PID" 2>/dev/null || true
-        fi
+    # Run Bob — all output goes to log file only (watcher shows status instead)
+    set +e
+    cat "$PROMPT_FILE" | "$BOB_CMD" $BOB_FLAGS > "$LOG_FILE" 2>&1
+    BOB_EXIT=$?
+    set -e
+
+    # Stop the progress watcher
+    if [ -n "$WATCH_PID" ]; then
+        kill "$WATCH_PID" 2>/dev/null || true
+        wait "$WATCH_PID" 2>/dev/null || true
+        WATCH_PID=""
+    fi
+
+    BOB_OUTPUT=$(cat "$LOG_FILE")
+
+    if [ "$BOB_EXIT" -eq 0 ]; then
         echo ""
         echo -e "${GREEN}✓ Bob execution completed${NC}"
 
@@ -395,7 +407,6 @@ while true; do
             echo -e "${YELLOW}  This means acceptance criteria were not met.${NC}"
             echo -e "${YELLOW}  Retrying in next iteration...${NC}"
             CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
-            print_latest_output "$LOG_FILE" "Bob"
 
             if [ $CONSECUTIVE_FAILURES -ge $MAX_CONSECUTIVE_FAILURES ]; then
                 echo ""
@@ -409,14 +420,9 @@ while true; do
             fi
         fi
     else
-        if [ -n "$WATCH_PID" ]; then
-            kill "$WATCH_PID" 2>/dev/null || true
-            wait "$WATCH_PID" 2>/dev/null || true
-        fi
-        echo -e "${RED}✗ Bob execution failed${NC}"
+        echo -e "${RED}✗ Bob execution failed (exit: $BOB_EXIT)${NC}"
         echo -e "${YELLOW}Check log: $LOG_FILE${NC}"
         CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
-        print_latest_output "$LOG_FILE" "Bob"
     fi
 
     # Push changes after each iteration (if any)
