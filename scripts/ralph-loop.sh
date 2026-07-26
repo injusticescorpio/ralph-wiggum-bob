@@ -130,7 +130,7 @@ stream_progress() {
                 # <thinking> opens
                 if echo "$line" | grep -q "^<thinking>"; then
                     in_thinking=true
-                    thinking_title=$(echo "$line" | sed 's|^<thinking>||;s|</thinking>.*||' | xargs)
+                    thinking_title=$(echo "$line" | sed 's|^<thinking>||;s|</thinking>.*||' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
                     if [ -n "$thinking_title" ]; then
                         printf "${CYAN}  🤔 %s${NC}\n" "$thinking_title" > /dev/tty
                         thinking_title="__shown__"
@@ -152,7 +152,7 @@ stream_progress() {
                 # first non-empty line inside <thinking> becomes the title
                 if [ "$in_thinking" = true ] && [ -z "$thinking_title" ]; then
                     local stripped
-                    stripped=$(echo "$line" | sed 's/\*\*//g' | xargs)
+                    stripped=$(echo "$line" | sed 's/\*\*//g' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
                     if [ -n "$stripped" ]; then
                         printf "${CYAN}  🤔 %s${NC}\n" "$stripped" > /dev/tty
                         thinking_title="__shown__"
@@ -170,7 +170,7 @@ stream_progress() {
                 # active todo item ( ⊡ )
                 if echo "$line" | grep -qE "^ ⊡ "; then
                     local task
-                    task=$(echo "$line" | sed 's/^ ⊡ //' | xargs)
+                    task=$(echo "$line" | sed 's/^ ⊡ //' | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
                     printf "${PURPLE}  ▶ %s${NC}\n" "$task" > /dev/tty
                 fi
 
