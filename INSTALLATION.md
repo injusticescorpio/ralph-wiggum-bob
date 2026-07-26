@@ -109,13 +109,11 @@ For existing projects, inspect the codebase yourself — don't pressure the user
 
 #### 5. Autonomy Settings
 
-> "Two quick settings:
+> "One quick setting:
 >
 > **YOLO Mode** *(recommended)*: Bob executes commands and modifies files without asking each time. Maps to `bob --yolo`.
 >
-> **Git Autonomy** *(recommended)*: Commit and push automatically after each completed spec.
->
-> Enable both? (yes/no)"
+> Enable? (yes/no)"
 
 Default to YES if the user seems agreeable.
 
@@ -178,7 +176,6 @@ Keep it **concise** — Bob reads this at the start of every iteration.
 ## Autonomy
 
 YOLO Mode: {ENABLED/DISABLED}
-Git Autonomy: {ENABLED/DISABLED}
 
 ---
 
