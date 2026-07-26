@@ -401,6 +401,21 @@ while true; do
                 echo -e "${CYAN}Or delete IMPLEMENTATION_PLAN.md to work directly from specs.${NC}"
                 break
             fi
+
+            # For build mode: if ALL_DONE or all specs are now complete, exit
+            if echo "$BOB_OUTPUT" | grep -q "<promise>ALL_DONE</promise>"; then
+                echo ""
+                echo -e "${GREEN}All specs complete (ALL_DONE signal). Exiting loop.${NC}"
+                break
+            fi
+            if [ "$HAS_PLAN" = false ] && [ "$HAS_SPECS" = true ]; then
+                INCOMPLETE_SPEC_COUNT=$(count_incomplete_root_specs "specs")
+                if [ "$INCOMPLETE_SPEC_COUNT" -eq 0 ]; then
+                    echo ""
+                    echo -e "${GREEN}All $SPEC_COUNT specs are now COMPLETE. Exiting loop.${NC}"
+                    break
+                fi
+            fi
         else
             echo -e "${YELLOW}⚠ No completion signal found${NC}"
             echo -e "${YELLOW}  Bob did not output <promise>DONE</promise> or <promise>ALL_DONE</promise>${NC}"
