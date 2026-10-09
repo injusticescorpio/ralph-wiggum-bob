@@ -41,7 +41,6 @@ CONSTITUTION="$PROJECT_DIR/.specify/memory/constitution.md"
 MAX_ITERATIONS=0  # 0 = unlimited
 MODE="build"
 BOB_CMD="${BOB_CMD:-bob}"
-YOLO_FLAG="--yolo"
 TAIL_LINES=5
 
 # Colors
@@ -57,14 +56,6 @@ mkdir -p "$LOG_DIR"
 
 # Source spec queue helpers
 source "$SCRIPT_DIR/lib/spec_queue.sh"
-
-# Check constitution for YOLO setting
-YOLO_ENABLED=true
-if [[ -f "$CONSTITUTION" ]]; then
-    if grep -q "YOLO Mode.*DISABLED" "$CONSTITUTION" 2>/dev/null; then
-        YOLO_ENABLED=false
-    fi
-fi
 
 show_help() {
     cat <<EOF
@@ -87,17 +78,17 @@ Work Sources (checked in order):
   2. specs/ folder - Otherwise, pick highest priority incomplete spec
 
 Bob CLI flags used:
-  -p              Non-interactive prompt mode (required for automation)
-  --yolo          Auto-approve all tool calls (enabled when YOLO Mode is on)
+  -p "<prompt>"   Non-interactive prompt mode (required for automation)
 
 How it works:
-  1. Each iteration pipes PROMPT_build.md into bob via stdin
+  1. Each iteration passes PROMPT_build.md content to bob via -p flag
   2. Bob picks the HIGHEST PRIORITY incomplete spec/task
   3. Bob implements, tests, and verifies acceptance criteria
-  4. Bob outputs <promise>DONE</promise> ONLY if criteria are met
-  5. Bash loop checks for the magic phrase
-  6. If found, loop continues to next iteration (fresh context)
-  7. If not found, loop retries
+  4. Acceptance criteria checkboxes are ticked and spec marked COMPLETE
+  5. Bob outputs <promise>DONE</promise> ONLY if all criteria are met
+  6. Bash loop checks for the magic phrase
+  7. If found, loop continues to next iteration (fresh context)
+  8. If not found, loop retries
 
 EOF
 }
@@ -245,7 +236,13 @@ Read `.specify/memory/constitution.md` — it contains all project principles, w
 instructions, work sources, and completion signal requirements.
 
 Find the highest-priority incomplete work item, implement it completely, verify all
-acceptance criteria, commit and push, then output `<promise>DONE</promise>`.
+acceptance criteria, commit and push, then:
+
+1. **Tick every `- [ ]` checkbox** in the spec's `## Acceptance Criteria` to `- [x]`
+   using `search_and_replace` on the spec file — do this before marking complete.
+2. **Append `## Status: COMPLETE`** to the spec file.
+
+Only output `<promise>DONE</promise>` after both steps above are done.
 BUILDEOF
 
 cat > "PROMPT_plan.md" << 'PLANEOF'
@@ -268,13 +265,8 @@ if [ ! -f "$PROMPT_FILE" ]; then
     exit 1
 fi
 
-# Build Bob flags
-# bob -p reads prompt from argument; we pipe via stdin using `cat file | bob`
-# --yolo auto-approves all tool calls (file writes, shell commands, etc.)
-BOB_FLAGS=""
-if [ "$YOLO_ENABLED" = true ]; then
-    BOB_FLAGS="$YOLO_FLAG"
-fi
+# run = headless non-interactive mode (dedicated automation command)
+BOB_FLAGS="run"
 
 # Get current branch
 CURRENT_BRANCH=$(git branch --show-current 2>/dev/null || echo "main")
@@ -304,7 +296,6 @@ echo -e "${BLUE}Mode:${NC}     $MODE"
 echo -e "${BLUE}Agent:${NC}    IBM Bob Shell (bob)"
 echo -e "${BLUE}Prompt:${NC}   $PROMPT_FILE"
 echo -e "${BLUE}Branch:${NC}   $CURRENT_BRANCH"
-echo -e "${YELLOW}YOLO:${NC}     $([ "$YOLO_ENABLED" = true ] && echo "ENABLED (--yolo)" || echo "DISABLED")"
 [ -n "$SESSION_LOG" ] && echo -e "${BLUE}Log:${NC}      $SESSION_LOG"
 [ $MAX_ITERATIONS -gt 0 ] && echo -e "${BLUE}Max:${NC}      $MAX_ITERATIONS iterations"
 echo ""
@@ -369,7 +360,7 @@ while true; do
 
     # Run Bob — all output goes to log file only (watcher shows status instead)
     set +e
-    cat "$PROMPT_FILE" | "$BOB_CMD" $BOB_FLAGS > "$LOG_FILE" 2>&1
+    "$BOB_CMD" $BOB_FLAGS "$(cat "$PROMPT_FILE")" > "$LOG_FILE" 2>&1
     BOB_EXIT=$?
     set -e
 
@@ -439,14 +430,6 @@ while true; do
         echo -e "${YELLOW}Check log: $LOG_FILE${NC}"
         CONSECUTIVE_FAILURES=$((CONSECUTIVE_FAILURES + 1))
     fi
-
-    # Push changes after each iteration (if any)
-    git push origin "$CURRENT_BRANCH" 2>/dev/null || {
-        if git log origin/$CURRENT_BRANCH..HEAD --oneline 2>/dev/null | grep -q .; then
-            echo -e "${YELLOW}Push failed, creating remote branch...${NC}"
-            git push -u origin "$CURRENT_BRANCH" 2>/dev/null || true
-        fi
-    }
 
     # Brief pause between iterations
     echo ""

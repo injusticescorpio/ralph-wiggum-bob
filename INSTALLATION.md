@@ -293,7 +293,7 @@ EOF
 │  ralph-loop.sh                              │
 │                                             │
 │  while true:                                │
-│    cat PROMPT_build.md | bob -p --yolo      │  ← non-interactive Bob call
+│    bob run "$(cat PROMPT_build.md)"         │  ← headless Bob call
 │    if output contains <promise>DONE</promise>│
 │      → continue to next spec                │
 │    else                                     │
@@ -310,11 +310,12 @@ The loop script never needs updating; all project logic lives in the constitutio
 
 | Capability | Bob CLI Flag |
 |------------|-------------|
-| Non-interactive mode | `bob -p "prompt"` or `cat prompt.txt \| bob` |
+| Headless / non-interactive mode | `bob run "prompt"` |
 | Auto-approve all tools | `bob --yolo` |
 | Accept license (first run) | `bob --accept-license -p "Hello"` |
-| Reference a file in prompt | `bob -p "Review @src/app.js"` |
+| Reference a file in prompt | `bob run "Review @src/app.js"` |
 | Hide intermediary output | `bob --hide-intermediary-output` |
+| Legacy non-interactive (also works) | `bob -p "prompt"` |
 
 > **Note:** `--yolo` in Bob Shell auto-approves file writes and shell commands but **never** operates outside the directory where Bob was started.
 

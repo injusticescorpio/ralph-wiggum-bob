@@ -3,7 +3,7 @@ name: ralph-wiggum-bob
 description: Autonomous AI coding with spec-driven development for IBM Bob Shell. Implements Geoffrey Huntley's iterative bash loop methodology where Bob works through specs one at a time, outputting a completion signal only when acceptance criteria are 100% met.
 license: MIT
 metadata:
-  version: "4.0"
+  version: "4.1"
   repository: https://github.com/injusticescorpio/ralph-wiggum-bob
 ---
 
@@ -94,10 +94,20 @@ Bob outputs `<promise>DONE</promise>` **ONLY** when:
 - All acceptance criteria are verified
 - Tests pass
 - Changes are committed and pushed
+- **Every `- [ ]` checkbox in the spec is ticked `- [x]`** and `## Status: COMPLETE` is appended
 
 The bash loop checks for this phrase. If not found, it retries.
 
-### 4. Backpressure via Tests
+### 4. Mandatory Spec Completion Steps
+
+When finishing any spec, these two steps are **required** before outputting `<promise>DONE</promise>`:
+
+1. **Tick every `- [ ]` checkbox** in the spec's `## Acceptance Criteria` to `- [x]` using `search_and_replace` — do this before marking complete
+2. **Append `## Status: COMPLETE`** to the spec file
+
+> The loop script detects `## Status: COMPLETE` to know a spec is done. Checkboxes must all be `[x]` to prove criteria were met.
+
+### 5. Backpressure via Tests
 
 Tests, lints, and builds act as guardrails. Bob must fix issues before outputting the completion signal.
 
@@ -165,20 +175,13 @@ Every loop run writes **all output** to log files in `logs/`:
 
 Trust Bob to self-identify, self-correct, and self-improve. Observe patterns and adjust prompts.
 
-### YOLO Mode
-
-For Ralph to work effectively, enable full autonomy:
-- IBM Bob Shell: `--yolo`
-
-⚠️ **Use at your own risk.** Bob Shell's `--yolo` never operates outside the directory where it was started.
-
 ## Bob Shell Quick Reference
 
 | Capability | Bob CLI Flag |
 |------------|-------------|
-| Non-interactive mode | `bob -p "prompt"` or `cat prompt.txt \| bob` |
-| Auto-approve all tools | `bob --yolo` |
-| Reference a file in prompt | `bob -p "Review @src/app.js"` |
+| Non-interactive / headless mode | `bob run "prompt"` |
+| Reference a file in prompt | `bob run "Review @src/app.js"` |
+| Legacy non-interactive (also works) | `bob -p "prompt"` |
 
 ## Links
 
